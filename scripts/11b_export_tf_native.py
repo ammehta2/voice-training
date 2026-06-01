@@ -411,6 +411,19 @@ def main() -> None:
     pt_backbone.load_state_dict(state)
     print(f"Loaded PyTorch backbone: {sum(p.numel() for p in pt_backbone.parameters()):,} params")
 
+    # ---- Bake temperature scaling into final FC layer (if temperature.txt exists) ----
+    # Math: divide_by_T(W @ x + b) == (W/T) @ x + (b/T)
+    # So scaling fc.weight and fc.bias by 1/T baked the temperature into the model.
+    temp_path = pt_path.parent / "temperature.txt"
+    if temp_path.exists():
+        T = float(temp_path.read_text().strip())
+        print(f"Baking temperature T={T:.4f} into final FC layer weights")
+        with torch.no_grad():
+            pt_backbone.fc.weight.div_(T)
+            pt_backbone.fc.bias.div_(T)
+    else:
+        print("No temperature.txt found; exporting model as-is (T=1)")
+
     # ---- Build TF backbone + port weights ----
     print("\nBuilding TF Keras backbone...")
     tf_backbone = build_tf_kws_backbone()

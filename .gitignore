@@ -48,14 +48,25 @@ voice_samples/*.m4a
 voice_samples/*.ogg
 
 # ============================================================
-# Trained models — too large for git, regenerable from code+data
+# Trained models — selectively committed
 # ============================================================
-# Ignore EVERYTHING in models/* by default; whitelist with !pattern if needed
+# Ignore everything in models/* by default
 models/*/*
 
-# (If you want to keep a notes file per model, uncomment:)
-# !models/*/README.md
-# !models/*/NOTES.md
+# But whitelist the deployable artifacts and training metadata.
+# Mobile-deployable models (29 KB - 1.2 MB):
+!models/*/*.tflite
+# PyTorch checkpoints (~50 KB) for re-export / fine-tuning:
+!models/*/best.pt
+# Training history (small):
+!models/*/training_curves.png
+!models/*/history.npz
+
+# Still ignored even with the whitelist above (too big / regenerable):
+# - *.onnx (intermediate, can be regenerated from best.pt)
+# - saved_model.pb + variables/ (TF SavedModel, intermediate)
+# - calibration.npy (76 MB calibration data; regenerable from features)
+# - final.pt (use best.pt instead)
 
 # ============================================================
 # Generated artifacts

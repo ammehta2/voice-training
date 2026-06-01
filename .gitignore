@@ -36,6 +36,7 @@ data/closing/
 # Test sets
 data/partial_chants_test/
 data/real_world_test/
+data/speech_negative_test/
 
 # Downloaded datasets
 data/sources/

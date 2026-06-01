@@ -30,8 +30,10 @@ SAMPLE_RATE = 16000
 # With 2985+ source positives (real + far-field + Sarvam + MMS-TTS), we have
 # plenty of variety. Reduce aug count to avoid overfitting on augmented
 # variants while keeping the dataset manageable.
-POSITIVE_AUGMENTATIONS = 5     # 2985 x 6 = ~18K augmented positives
-NEGATIVE_AUGMENTATIONS = 2     # 12K x 3 = ~36K augmented negatives
+# Bumped from 5 to 8 to ensure each of the 4 severities (light/medium/heavy/
+# bandwidth_limited) gets at least 2 instances per source.
+POSITIVE_AUGMENTATIONS = 8     # 2985 x 9 = ~27K augmented positives
+NEGATIVE_AUGMENTATIONS = 2     # 24K x 3 = ~72K augmented negatives (keep cap on time)
 
 POS_IN = Path("data/closing/positive_raw")
 POS_OUT = Path("data/closing/positive_aug")
@@ -66,6 +68,19 @@ def pipeline_for(severity: str):
         if HAS_ROOM:
             ops.append(RoomSimulator(min_target_rt60=0.15, max_target_rt60=0.8, p=0.5))
         return Compose(ops)
+    if severity == "bandwidth_limited":
+        # Simulates mobile-pipeline pre-processing that aggressively low-passes
+        # audio (e.g., Picovoice noise suppression, cheap mic hardware).
+        # Real-world capture in user testing showed energy almost entirely
+        # below 500 Hz. We train on cutoffs 400-2000 Hz so the model learns
+        # to detect chants when only the lower spectrum is available.
+        ops = [
+            LowPassFilter(min_cutoff_freq=400, max_cutoff_freq=2000, p=1.0),  # ALWAYS apply
+            AddGaussianNoise(min_amplitude=0.002, max_amplitude=0.02, p=0.8),
+            Gain(min_gain_db=-25, max_gain_db=5, p=0.9),  # often quiet too
+            PitchShift(min_semitones=-2, max_semitones=2, p=0.4),
+        ]
+        return Compose(ops)
     raise ValueError(f"Unknown severity: {severity}")
 
 
@@ -78,7 +93,9 @@ def augment_directory(input_dir: Path, output_dir: Path, num_augmentations: int)
 
     print(f"  {len(files)} sources × {num_augmentations} aug + orig = "
           f"{len(files) * (num_augmentations + 1)} outputs")
-    severities = ["light", "medium", "heavy"]
+    # Cycle through severities. "bandwidth_limited" addresses real-world
+    # mobile audio capture that aggressively low-passes the signal.
+    severities = ["light", "medium", "heavy", "bandwidth_limited"]
 
     for f in tqdm(files, desc=input_dir.name):
         try:

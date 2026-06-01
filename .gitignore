@@ -1,0 +1,68 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# ============================================================
+# Audio data — too large for git, regenerable from source
+# ============================================================
+# Source audio (in user's Music folder, not in repo)
+data/positive_raw/
+data/positive_raw_originals/
+data/positive_raw_originals_v1/
+
+# Pipeline outputs (regenerated from source by scripts)
+data/positive_aug/
+data/negative_raw/
+data/negative_aug/
+data/features/
+
+# Pipeline subfolder outputs (opening + closing pipelines)
+data/opening/
+data/closing/
+
+# Test sets
+data/partial_chants_test/
+data/real_world_test/
+
+# Downloaded datasets
+data/sources/
+
+# Reference voice samples (provided by user)
+voice_samples/*.wav
+voice_samples/*.mp3
+voice_samples/*.m4a
+voice_samples/*.ogg
+
+# ============================================================
+# Trained models — too large for git, regenerable from code+data
+# ============================================================
+# Ignore EVERYTHING in models/* by default; whitelist with !pattern if needed
+models/*/*
+
+# (If you want to keep a notes file per model, uncomment:)
+# !models/*/README.md
+# !models/*/NOTES.md
+
+# ============================================================
+# Generated artifacts
+# ============================================================
+mel_filterbank.b64
+logs/
+*.log
+
+# Tensorboard
+runs/
+events.out.tfevents.*

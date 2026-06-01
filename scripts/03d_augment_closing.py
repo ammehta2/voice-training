@@ -27,8 +27,11 @@ except ImportError:
 from tqdm import tqdm
 
 SAMPLE_RATE = 16000
-POSITIVE_AUGMENTATIONS = 20    # 5 sources × 21 (incl. orig) = 105 positives
-NEGATIVE_AUGMENTATIONS = 1     # 4125 × 2 (incl. orig) = ~8200 negatives
+# With 2985+ source positives (real + far-field + Sarvam + MMS-TTS), we have
+# plenty of variety. Reduce aug count to avoid overfitting on augmented
+# variants while keeping the dataset manageable.
+POSITIVE_AUGMENTATIONS = 5     # 2985 x 6 = ~18K augmented positives
+NEGATIVE_AUGMENTATIONS = 2     # 12K x 3 = ~36K augmented negatives
 
 POS_IN = Path("data/closing/positive_raw")
 POS_OUT = Path("data/closing/positive_aug")

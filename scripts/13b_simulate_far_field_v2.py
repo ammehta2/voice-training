@@ -158,12 +158,16 @@ def main() -> None:
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    # Sources = ORIGINALS only (not v1 _ff variants, not partials, not v2 _ff2)
+    # Sources = ALL positive source recordings that aren't already-augmented variants.
+    # Includes: real recordings, Sarvam TTS, MMS-TTS synthetics.
+    # Excludes: existing _ff (v1) and _ff2 (v2) far-field variants, partials.
     sources = sorted([
-        f for f in SOURCE_DIR.glob("real_navkar_*.wav")
-        if "_ff" not in f.stem and "_partial" not in f.stem
+        f for f in SOURCE_DIR.glob("*.wav")
+        if (("real_navkar_" in f.stem or "sarvam_navkar_" in f.stem or "mmstts_navkar_" in f.stem)
+            and "_ff" not in f.stem
+            and "_partial" not in f.stem)
     ])
-    print(f"Sources: {len(sources)} close-mic recordings")
+    print(f"Sources: {len(sources)} close-mic recordings (real + Sarvam + MMS-TTS)")
     print(f"Generating {args.n_per_recording} v2 far-field versions per source -> "
           f"{len(sources) * args.n_per_recording} new files")
     print(f"Distances: {[d[0] for d in DISTANCE_CONFIGS]} m")

@@ -36,6 +36,10 @@ data/closing/
 # v7 multi-phrase pipeline outputs (closing + pre-closing + shared negatives)
 data/multi/
 
+# v8 adversarial hard-negative corpus (synthetic Mangalam/Namo prayers)
+data/hard_negatives/
+data/real_world_test_v2/
+
 # Test sets
 data/partial_chants_test/
 data/real_world_test/

@@ -70,20 +70,65 @@ The QbE approach is **validated to the limit of available data**:
    counts on sustained matches + debounce, not single-window max over a file),
    and per-user threshold from enrollment statistics.
 
-## Decisive test (pending)
+## Decisive test — PASSED (script 43, live captures 2026-06-11)
 
-Phase 0 live captures (namobuddy mobile commit `54f742c`: Counter Settings →
-Diagnostics → "Record what the counter hears") through the REAL
-`VOICE_RECOGNITION` path: 2-3 chanting sessions + 1 background/talking
-session. Re-run script 42 with enrollment + background from those captures.
-If separation holds → port to mobile:
+User captured via the in-app diagnostics screen (real VOICE_RECOGNITION
+path): two ~60 s continuous-chanting sessions + one 27 s background-voices
+session.
+
+### A. The live channel, finally measured
+| | rms | peak | rolloff95 |
+|---|---|---|---|
+| session1 (chant) | 0.0029 | 0.028 | 5625 Hz |
+| session2 (chant) | 0.0034 | 0.031 | 5531 Hz |
+| background | 0.0025 | 0.037 | 6969 Hz |
+
+- The channel is NOT band-limited (full ~5.5 kHz speech bandwidth) — it is
+  just VERY quiet (peak ~0.03). The v6 "bandwidth_limited" hypothesis was
+  wrong for this device; it was a gain problem.
+- **`RMS_GATE = 0.006` in the live engine is above the real chant RMS
+  (~0.003) — the noise gate was silently blocking the model on real chants.**
+  Major contributor to the "missing a lot / unusable" end state.
+- v8 close head live: fired >=0.5 only ~2x per ~9-chant session (confirms
+  "scores too low"). Pre head fires on background voices (max 0.72) —
+  confirms why it had to be disabled.
+
+### B. QbE activity separation on the live channel: PERFECT
+Templates = every 8th window of session1; competitors = first half of
+background + 8 TTS imposter chants; test = session2 vs held-out background.
+
+- session2 chant windows: p10 +0.018, median +0.026
+- background windows: max -0.012
+- **Any threshold in (-0.012, +0.018) → 100% of chant windows pass, 0/148
+  background FPs.** Recommended operating point: +0.005.
+
+### C. Cycle counting on the live channel: WORKS
+Closing template = 2.5 s of session1 anchored at its v8-close peak (t=39 s).
+Peak-picking on the delta timeline (min 5 s separation):
+
+- session2: **9 peaks** at consistent ~5-7.5 s gaps (user chants ~6.5 s per
+  Navkar at jaap pace → ~9 chants per 60 s — matches the requested "~10")
+- session1 (self): 9-10 peaks
+- background: **0 peaks** at every threshold tested
+
+## Production port plan (mobile)
 
 ```
-melspectrogram.tflite + embedding_model.tflite (run via react-native-fast-tflite)
-enrollment = calibration screen (3 chants + 20 s background)
-score = dual-cohort cosine, threshold from enrollment stats
-counter = k-of-n window matches + 5 s debounce
+Native module (Kotlin, like the existing rawmic module — react-native-fast-tflite
+cannot resize the melspec model's dynamic input):
+  melspectrogram.tflite (streamed in fixed chunks, resizeInput once)
+  embedding_model.tflite (1,76,32,1) -> 96-dim vector per 80 ms
+  ring buffers; per 250 ms hop: window mean over last 31 steps ->
+  delta = max cos(templates) - max(cos(background), cos(imposters)) ->
+  peak detection with 5 s min separation -> count event
+
+Enrollment (rework calibration screen):
+  3 discrete chants + ~20 s background on the user's device
+  templates = chant window embeddings; bg cohort = background windows
+  imposter embeddings precomputed offline from TTS, shipped as an asset
+
+Threshold: fixed +0.005 initially; later derived per user from enrollment stats.
 ```
 
-v8 stays as an optional corroborating signal; the from-scratch DS-CNN line
-(v1-v8) is retired as the primary detector.
+The from-scratch DS-CNN line (v1-v8) is retired as the primary detector.
+v8 optionally stays as a closing-locator during enrollment only.

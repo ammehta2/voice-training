@@ -85,3 +85,6 @@ logs/
 # Tensorboard
 runs/
 events.out.tfevents.*
+
+# Live device captures (user voice data — never commit)
+data/live_captures/

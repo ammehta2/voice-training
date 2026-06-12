@@ -132,3 +132,26 @@ Threshold: fixed +0.005 initially; later derived per user from enrollment stats.
 
 The from-scratch DS-CNN line (v1-v8) is retired as the primary detector.
 v8 optionally stays as a closing-locator during enrollment only.
+
+## Runtime addendum — LiteRT framing (script 45, 2026-06-11)
+
+The mobile app ships LiteRT 1.4.0 (forced: react-native-fast-tflite v3 uses
+LiteRT, and two TFLite runtimes can't coexist in one APK). On-device crash
+"[1,1,75,32] vs [1,1,76,32]" traced to a wrong constant, NOT runtime
+divergence. Verified by direct probe under BOTH runtimes (Python
+ai-edge-litert 2.1.5 + tf.lite):
+
+- samples -> mel frames is IDENTICAL on both: 12480 -> 75, **12640 -> 76**.
+  The original 12480 constant was bad arithmetic, never probed directly.
+- The embedding model requires EXACTLY 76 frames. resize_tensor_input to
+  [1,75,32,1] **segfaults LiteRT natively** — dynamic frame counts are not
+  an option.
+- Numeric equivalence: per-step embedding cosine(tf.lite, LiteRT) =
+  1.000000 over 116 steps of live capture.
+- Separation re-check fully under LiteRT with the shipped imposter JSON:
+  chant p10 +0.018 / med +0.026, background max -0.012, 100% chant above
+  +0.005, 0/148 background FPs — identical to the validated numbers. No
+  asset regeneration needed; LiteRT 1.4.0 alignment is safe.
+
+Mobile fix: MEL_INPUT_SAMPLES = 12640 + a load-time probe that fails loudly
+if a future runtime shifts framing (namobuddy commit 2de1d2a).
